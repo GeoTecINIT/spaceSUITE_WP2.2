@@ -5,38 +5,52 @@ path = 'Data/'
 files = ['Euraxess_GNSS.xlsx', 'Euraxess_Satcom.xlsx', 'Indeed_GNSS.xlsx', 'Indeed_Satcom.xlsx', 
          'LinkedIn_GNSS.xlsx', 'LinkedIn_Satcom.xlsx', 'SpaceIndividuals_GNSS.xlsx', 'SpaceIndividuals_Satcom.xlsx']
 
-new_df = pd.DataFrame()
+# Columns to check for a '1' and remove those rows
+problematic_keywords = ['Robustness', 'Verification', 'Testing', 'Computer scientists', 'Physics', 'Secure Communications', 'Numerical simulations', 'Positioning', 'Cyber security', 'Cryptography', 'Receiver', 'Network management', 'Statistical analysis'] 
+
+new_df = pd.DataFrame(columns=['Descriptions', 'Requirements'])
 
 for excel_file in files:
     df = pd.read_excel(path + excel_file)
     
-    # Splitting data: Train (99%) and Test (1%)
-    _, sampled_df = train_test_split(df, test_size=0.005, random_state=42)
+    # Filter to keep only the columns that exist in the DataFrame
+    valid_columns_to_check = [col for col in problematic_keywords if col in df.columns]
     
-    # Columns to concatenate
-    columns = ['Title', 'OfferDescription', 'Requirements', 'Responsibilities', 'AdditionalInformation', 'Job_title', 'Job_Title', 'Job_description', 'Job_function', 'Industry']
-    existing_columns = [col for col in columns if col in df.columns]
-
-    # Concatenate the selected columns into a single string
-    sampled_df['Concatenated'] = sampled_df[existing_columns].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
-    
-    # Create a new DataFrame with 'Concatenated' column renamed to 'Descriptions'
-    temp_df = pd.DataFrame({'Descriptions': sampled_df['Concatenated']})
-    
-    # Handle 'Requirements' column if it exists
-    if 'Requirements' in df.columns:
-        requirements = sampled_df['Requirements'].tolist()
+    # If there are valid columns to check, remove rows with '1' in those columns
+    if valid_columns_to_check:
+        df_filtered = df[~df[valid_columns_to_check].eq(1).any(axis=1)]
     else:
-        requirements = ['-' for _ in range(len(sampled_df))]
+        df_filtered = df  # If no valid columns, no filtering is applied
     
-    # Convert requirements list to DataFrame
-    requirements_df = pd.DataFrame({'Requirements': requirements})
+    # Splitting data: Train (99%) and Test (1%)
+    _, sampled_df = train_test_split(df_filtered, test_size=0.01, random_state=42)
     
-    # Concatenate 'Descriptions' and 'Requirements' columns
-    combined_df = pd.concat([temp_df, requirements_df], axis=1)
+    # Columns to concatenate into the 'Descriptions' field
+    columns = ['Title', 'OfferDescription', 'Requirements', 'Responsibilities', 'AdditionalInformation', 'Job_title', 'Job_Title', 'Job_description', 'Job_function', 'Industry']
+    existing_columns = [col for col in columns if col in sampled_df.columns]
+
+    # Create 'Descriptions' by concatenating the selected columns
+    sampled_df['Descriptions'] = sampled_df[existing_columns].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+    
+    # If 'Requirements' column exists, use it; otherwise, fill with '-'
+    if 'Requirements' in sampled_df.columns:
+        sampled_df['Requirements'] = sampled_df['Requirements'].fillna('-')
+    else:
+        sampled_df['Requirements'] = '-'
+    
+    if 'Keywords' not in sampled_df.columns:
+        if 'Search_Keyword' in sampled_df.columns:
+            sampled_df['Keywords'] = sampled_df['Search_Keyword']
+        elif 'Keyword' in sampled_df.columns:
+            sampled_df['Keywords'] = sampled_df['Keyword']
+        else:
+            sampled_df['Keywords'] = '-'
+            
+    # Select only 'Descriptions' and 'Requirements' columns for the final dataframe
+    combined_df = sampled_df[['Descriptions', 'Requirements', 'Keywords']]
 
     # Append to the new_df
     new_df = pd.concat([new_df, combined_df], ignore_index=True)
 
 # Save the combined DataFrame to an Excel file
-new_df.to_excel('test_mixed_data.xlsx', index=False)
+new_df.to_excel('test_relevant_keywords_data.xlsx', index=False)
