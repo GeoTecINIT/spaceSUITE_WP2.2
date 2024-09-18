@@ -22,8 +22,8 @@ for excel_file in files:
     else:
         df_filtered = df  # If no valid columns, no filtering is applied
     
-    # Splitting data: Train (99%) and Test (1%)
-    _, sampled_df = train_test_split(df_filtered, test_size=0.01, random_state=42)
+    # Splitting data: Train (95%) and Test (5%)
+    _, sampled_df = train_test_split(df_filtered, test_size=0.05, random_state=42)
     
     # Columns to concatenate into the 'Descriptions' field
     columns = ['Title', 'OfferDescription', 'Requirements', 'Responsibilities', 'AdditionalInformation', 'Job_title', 'Job_Title', 'Job_description', 'Job_function', 'Industry']
@@ -53,4 +53,4 @@ for excel_file in files:
     new_df = pd.concat([new_df, combined_df], ignore_index=True)
 
 # Save the combined DataFrame to an Excel file
-new_df.to_excel('test_relevant_keywords_data.xlsx', index=False)
+new_df.to_excel('test_data.xlsx', index=False)
